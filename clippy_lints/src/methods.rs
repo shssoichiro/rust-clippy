@@ -8,6 +8,7 @@ use rustc_const_eval::eval_const_expr_partial;
 use std::borrow::Cow;
 use std::fmt;
 use syntax::codemap::Span;
+use syntax::symbol::keywords;
 use utils::{get_trait_def_id, implements_trait, in_external_macro, in_macro, is_copy, match_path, match_trait_method,
             match_type, method_chain_args, return_ty, same_tys, snippet, span_lint, span_lint_and_then,
             span_note_and_lint, walk_ptrs_ty, walk_ptrs_ty_depth, last_path_segment, single_segment_path,
@@ -658,7 +659,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for Pass {
             for &(ref conv, self_kinds) in &CONVENTIONS {
                 if_let_chain! {[
                     conv.check(&name.as_str()),
-                    let Some(explicit_self) = sig.decl.inputs.get(0).and_then(hir::Arg::to_self),
+                    let Some(explicit_self) = sig.decl.inputs.get(0),
                     !self_kinds.iter().any(|k| k.matches(&explicit_self, is_copy)),
                 ], {
                     let lint = if item.vis == hir::Visibility::Public {
@@ -684,7 +685,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for Pass {
                !ret_ty.walk().any(|t| same_tys(cx, t, ty, implitem.id)) {
                 span_lint(cx,
                           NEW_RET_NO_SELF,
-                          explicit_self.span,
+                          first_arg.span,
                           "methods called `new` usually return `Self`");
             }
         }}
@@ -751,7 +752,7 @@ fn lint_or_fun_call(cx: &LateContext, expr: &hir::Expr, name: &str, args: &[hir:
     ) {
         // don't lint for constant values
         // FIXME: can we `expect` here instead of match?
-        let promotable = cx.tcx().rvalue_promotable_to_static.borrow()
+        let promotable = cx.tcx.rvalue_promotable_to_static.borrow()
                              .get(&arg.id).cloned().unwrap_or(true);
         if !promotable {
             return;
@@ -1348,19 +1349,21 @@ enum SelfKind {
 
 impl SelfKind {
     fn matches(self, slf: &hir::Arg, allow_value_for_ref: bool) -> bool {
-        if !slf.has_self() {
-            return self == No;
-        }
-        match (self, &slf.node) {
-            (SelfKind::Value, &hir::SelfKind::Value(_)) |
-            (SelfKind::Ref, &hir::SelfKind::Region(_, hir::Mutability::MutImmutable)) |
-            (SelfKind::RefMut, &hir::SelfKind::Region(_, hir::Mutability::MutMutable)) => true,
-            (SelfKind::Ref, &hir::SelfKind::Value(_)) |
-            (SelfKind::RefMut, &hir::SelfKind::Value(_)) => allow_value_for_ref,
-            (_, &hir::SelfKind::Explicit(ref ty, _)) => self.matches_explicit_type(ty, allow_value_for_ref),
+        if let hir::PatKind::Binding(_, _, name, _) = slf.pat.node {
+            if name.node == keywords::SelfValue.name() {
+               return match (self, &slf.pat.node) {
+                    (SelfKind::Value, &hir::SelfKind::Value(_)) |
+                    (SelfKind::Ref, &hir::SelfKind::Region(_, hir::Mutability::MutImmutable)) |
+                    (SelfKind::RefMut, &hir::SelfKind::Region(_, hir::Mutability::MutMutable)) => true,
+                    (SelfKind::Ref, &hir::SelfKind::Value(_)) |
+                    (SelfKind::RefMut, &hir::SelfKind::Value(_)) => allow_value_for_ref,
+                    (_, &hir::SelfKind::Explicit(ref ty, _)) => self.matches_explicit_type(ty, allow_value_for_ref),
 
-            _ => false,
+                    _ => false,
+                };
+            }
         }
+        false
     }
 
     fn matches_explicit_type(self, ty: &hir::Ty, allow_value_for_ref: bool) -> bool {

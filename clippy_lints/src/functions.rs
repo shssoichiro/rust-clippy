@@ -74,7 +74,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for Functions {
         cx: &LateContext<'a, 'tcx>,
         kind: intravisit::FnKind<'tcx>,
         decl: &'tcx hir::FnDecl,
-        expr: &'tcx hir::Expr,
+        body: &'tcx hir::Body,
         span: Span,
         nodeid: ast::NodeId
     ) {
@@ -102,7 +102,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for Functions {
             }
         }
 
-        self.check_raw_ptr(cx, unsafety, decl, expr, nodeid);
+        self.check_raw_ptr(cx, unsafety, decl, &body.value, nodeid);
     }
 
     fn check_trait_item(&mut self, cx: &LateContext<'a, 'tcx>, item: &'tcx hir::TraitItem) {

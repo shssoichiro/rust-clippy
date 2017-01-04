@@ -4,6 +4,7 @@ use rustc::ty;
 use rustc::hir::*;
 use syntax::ast::{Lit, LitKind, Name};
 use syntax::codemap::{Span, Spanned};
+use syntax::symbol::keywords;
 use utils::{get_item_name, in_macro, snippet, span_lint, span_lint_and_then, walk_ptrs_ty};
 
 /// **What it does:** Checks for getting the length of something via `.len()`
@@ -89,16 +90,14 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for LenZero {
 
 fn check_trait_items(cx: &LateContext, item: &Item, trait_items: &[TraitItem]) {
     fn is_named_self(item: &TraitItem, name: &str) -> bool {
-        &*item.name.as_str() == name &&
         if let TraitItemKind::Method(ref sig, _) = item.node {
-            if sig.decl.has_self() {
-                sig.decl.inputs.len() == 1
-            } else {
-                false
+            if let PatKind::Binding(_, _, name, _) = sig.decl {
+                if name.node == keywords::SelfValue.name() {
+                    return &*item.name.as_str() == name && sig.decl.inputs.len() == 1;
+                }
             }
-        } else {
-            false
         }
+        false
     }
 
     if !trait_items.iter().any(|i| is_named_self(i, "is_empty")) {

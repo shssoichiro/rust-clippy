@@ -65,7 +65,7 @@ impl<'a, 'tcx> LateLintPass<'a, 'tcx> for Pass {
         cx: &LateContext<'a, 'tcx>,
         _: visit::FnKind<'tcx>,
         decl: &'tcx FnDecl,
-        body: &'tcx Expr,
+        body: &'tcx Body,
         _: Span,
         id: NodeId
     ) {
