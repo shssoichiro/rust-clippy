@@ -4,7 +4,7 @@ use rustc::hir::*;
 use rustc::hir::def_id::{DefId, CRATE_DEF_INDEX};
 use rustc::hir::def::Def;
 use rustc::hir::map::Node;
-use rustc::lint::{LintContext, LateContext, Level, Lint};
+use rustc::lint::{LintContext, LateContext, Lint};
 use rustc::session::Session;
 use rustc::traits;
 use rustc::ty::{self, TyCtxt, Ty};
@@ -506,9 +506,7 @@ impl<'a> DiagnosticWrapper<'a> {
 
 pub fn span_lint<'a, T: LintContext<'a>>(cx: &T, lint: &'static Lint, sp: Span, msg: &str) {
     let mut db = DiagnosticWrapper(cx.struct_span_lint(lint, sp, msg));
-    if cx.current_level(lint) != Level::Allow {
-        db.wiki_link(lint);
-    }
+    db.wiki_link(lint);
 }
 
 pub fn span_help_and_lint<'a, 'tcx: 'a, T: LintContext<'tcx>>(
@@ -519,10 +517,8 @@ pub fn span_help_and_lint<'a, 'tcx: 'a, T: LintContext<'tcx>>(
     help: &str
 ) {
     let mut db = DiagnosticWrapper(cx.struct_span_lint(lint, span, msg));
-    if cx.current_level(lint) != Level::Allow {
-        db.0.help(help);
-        db.wiki_link(lint);
-    }
+    db.0.help(help);
+    db.wiki_link(lint);
 }
 
 pub fn span_note_and_lint<'a, 'tcx: 'a, T: LintContext<'tcx>>(
@@ -534,14 +530,12 @@ pub fn span_note_and_lint<'a, 'tcx: 'a, T: LintContext<'tcx>>(
     note: &str
 ) {
     let mut db = DiagnosticWrapper(cx.struct_span_lint(lint, span, msg));
-    if cx.current_level(lint) != Level::Allow {
-        if note_span == span {
-            db.0.note(note);
-        } else {
-            db.0.span_note(note_span, note);
-        }
-        db.wiki_link(lint);
+    if note_span == span {
+        db.0.note(note);
+    } else {
+        db.0.span_note(note_span, note);
     }
+    db.wiki_link(lint);
 }
 
 pub fn span_lint_and_then<'a, 'tcx: 'a, T: LintContext<'tcx>, F>(
@@ -553,10 +547,8 @@ pub fn span_lint_and_then<'a, 'tcx: 'a, T: LintContext<'tcx>, F>(
 ) where F: for<'b> FnOnce(&mut DiagnosticBuilder<'b>)
 {
     let mut db = DiagnosticWrapper(cx.struct_span_lint(lint, sp, msg));
-    if cx.current_level(lint) != Level::Allow {
-        f(&mut db.0);
-        db.wiki_link(lint);
-    }
+    f(&mut db.0);
+    db.wiki_link(lint);
 }
 
 pub fn span_lint_and_sugg<'a, 'tcx: 'a, T: LintContext<'tcx>>(

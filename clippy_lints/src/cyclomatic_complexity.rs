@@ -175,16 +175,14 @@ fn report_cc_bug(_: &LateContext, cc: u64, narms: u64, div: u64, shorts: u64, re
 }
 #[cfg(not(feature="debugging"))]
 fn report_cc_bug(cx: &LateContext, cc: u64, narms: u64, div: u64, shorts: u64, returns: u64, span: Span) {
-    if cx.current_level(CYCLOMATIC_COMPLEXITY) != Level::Allow {
-        cx.sess().span_note_without_error(span,
-                                          &format!("Clippy encountered a bug calculating cyclomatic complexity \
-                                                    (hide this message with `#[allow(cyclomatic_complexity)]`): \
-                                                    cc = {}, arms = {}, div = {}, shorts = {}, returns = {}. \
-                                                    Please file a bug report.",
-                                                   cc,
-                                                   narms,
-                                                   div,
-                                                   shorts,
-                                                   returns));
-    }
+    cx.sess().span_note_without_error(span,
+                                      &format!("Clippy encountered a bug calculating cyclomatic complexity \
+                                                (hide this message with `#[allow(cyclomatic_complexity)]`): \
+                                                cc = {}, arms = {}, div = {}, shorts = {}, returns = {}. \
+                                                Please file a bug report.",
+                                               cc,
+                                               narms,
+                                               div,
+                                               shorts,
+                                               returns));
 }
